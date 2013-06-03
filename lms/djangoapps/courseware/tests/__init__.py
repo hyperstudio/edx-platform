@@ -7,18 +7,13 @@ Contains:
     for testing Xmodules with mongo store.
 """
 
-import unittest
-import os
-
-import xmodule
-from mock import Mock
-
 from django.test.utils import override_settings
 from django.core.urlresolvers import reverse
 from django.test.client import Client
 
 from student.tests.factories import UserFactory, CourseEnrollmentFactory
 from courseware.tests.tests import TEST_DATA_MONGO_MODULESTORE
+from xmodule.tests import test_system
 from xmodule.modulestore import Location
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
@@ -47,6 +42,7 @@ class BaseTestXmodule(ModuleStoreTestCase):
     # Data from YAML common/lib/xmodule/xmodule/templates/NAME/default.yaml
     TEMPLATE_NAME = ""
     DATA = {}
+    MODEL_DATA = {'data': '<some_module></some_module>'}
 
     def setUp(self):
 
@@ -66,18 +62,28 @@ class BaseTestXmodule(ModuleStoreTestCase):
         )
 
         # username = robot{0}, password = 'test'
-        self.users = [UserFactory.create(username='robot%d' % i, email='robot+test+%d@edx.org' % i)
-                      for i in range(self.USER_COUNT)]
+        self.users = [
+            UserFactory.create(username='robot%d' % i, email='robot+test+%d@edx.org' % i)
+            for i in range(self.USER_COUNT)
+        ]
 
         for user in self.users:
             CourseEnrollmentFactory.create(user=user, course_id=self.course.id)
 
-        item = ItemFactory.create(
+        self.item_descriptor = ItemFactory.create(
             parent_location=section.location,
             template=self.TEMPLATE_NAME,
             data=self.DATA
         )
-        self.item_url = Location(item.location).url()
+
+        location = self.item_descriptor.location
+        system = test_system()
+        system.render_template = lambda template, context: context
+
+        self.item_module = self.item_descriptor.module_class(
+            system, location, self.item_descriptor, self.MODEL_DATA
+        )
+        self.item_url = Location(location).url()
 
         # login all users for acces to Xmodule
         self.clients = {user.username: Client() for user in self.users}
