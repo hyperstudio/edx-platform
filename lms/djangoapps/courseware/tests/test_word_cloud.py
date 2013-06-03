@@ -239,3 +239,18 @@ class TestWordCloud(BaseTestXmodule):
                     'status': 'fail',
                     'error': 'Unknown Command!'
                 })
+
+    def test_word_cloud_constructor(self):
+        """Make sure that all parameters extracted correclty from xml"""
+        # `get_html` return only context, cause we
+        # overwrite `system.render_template`
+        context = self.item_module.get_html()
+
+        expected_context = {
+            'ajax_url': 'courses/course_id/modx/a_location',
+            'element_class': 'word_cloud',
+            'element_id': 'i4x-MITx-999-word_cloud-Word_Cloud_17',
+            'num_inputs': 5,
+            'submitted': False
+        }
+        self.assertDictEqual(context, expected_context)
